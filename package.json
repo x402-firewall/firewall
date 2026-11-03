@@ -1,6 +1,6 @@
 {
   "name": "x402-firewall",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Smart Wallet Firewall & Auto-Pay Wrapper for AI Agents on Base L2",
   "type": "module",
   "main": "./dist/index.js",
