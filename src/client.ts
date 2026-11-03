@@ -64,14 +64,26 @@ export class FirewallClient {
     });
   }
 
+  /**
+   * Returns the agent's derived public Ethereum address on Base L2.
+   */
   public getAddress(): Address {
     return this.signerManager.getAddress();
   }
 
+  /**
+   * Queries the current budget caps, rolling 1h / 24h spends, and remaining USDC allowances.
+   */
   public getBudgetStatus(): BudgetStatus {
     return this.policyEngine.getBudgetStatus();
   }
 
+  /**
+   * Retrieves recent permitted and blocked transactions from the local SQLite audit log.
+   *
+   * @param limit - Maximum number of records to retrieve (default: 20)
+   * @param status - Optional filter for 'ALLOWED' or 'BLOCKED' entries
+   */
   public getAuditLogs(
     limit: number = 20,
     status?: 'ALLOWED' | 'BLOCKED'
@@ -79,6 +91,13 @@ export class FirewallClient {
     return this.spendTracker.getRecentLogs(limit, status ? { status } : undefined);
   }
 
+  /**
+   * Evaluates, simulates via eth_call, signs, and executes an on-chain EVM transaction
+   * against strict spending caps and dangerous selector checks.
+   *
+   * @param params - Transaction parameters (to, calldata, value, amountUsdc)
+   * @returns SafeTxResult containing success status, signed transaction hex, and simulation details
+   */
   public async executeSafeTx(params: SafeTxParams): Promise<SafeTxResult> {
     return this.policyEngine.withLock(async () => {
       let amountUsdc = params.amountUsdc ?? 0;
@@ -159,8 +178,18 @@ export class FirewallClient {
     });
   }
 
+  /**
+   * Closes the local SQLite audit database connection.
+   */
   public close(): void {
     this.spendTracker.close();
+  }
+
+  /**
+   * Supports TypeScript 5.2+ explicit resource management (`using client = new FirewallClient()`).
+   */
+  public [Symbol.dispose](): void {
+    this.close();
   }
 }
 

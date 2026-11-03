@@ -8,6 +8,7 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { CHAIN_IDS, USDC_ADDRESSES } from '../config/defaults.js';
 import type { Network } from '../config/schema.js';
+import { logger } from '../utils/logger.js';
 import crypto from 'node:crypto';
 
 export interface SignX402PaymentParams {
@@ -40,8 +41,15 @@ export class SignerManager {
 
   constructor(privateKey?: Hex, network: Network = 'base-sepolia') {
     this.#network = network;
+    const isEphemeral = !privateKey;
     const key = privateKey || generatePrivateKey();
     this.#account = privateKeyToAccount(key);
+
+    if (isEphemeral) {
+      logger.warn(
+        `No PRIVATE_KEY provided; generated ephemeral wallet ${this.#account.address} (funds deposited here will not persist across restarts)`
+      );
+    }
   }
 
   public getAddress(): Address {

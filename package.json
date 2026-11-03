@@ -6,10 +6,16 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
+    "@x402firewall/sdk": "./dist/cli.js",
     "x402-firewall": "./dist/cli.js",
     "x402firewall": "./dist/cli.js",
     "x402firewall-mcp": "./dist/cli.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -22,13 +28,30 @@
     "./core": {
       "import": "./dist/core/index.js",
       "types": "./dist/core/index.d.ts"
+    },
+    "./x402": {
+      "import": "./dist/x402/index.js",
+      "types": "./dist/x402/index.d.ts"
+    },
+    "./mcp": {
+      "import": "./dist/mcp/index.js",
+      "types": "./dist/mcp/index.d.ts"
     }
   },
   "scripts": {
     "build": "tsc",
     "test": "LOG_LEVEL=error vitest run",
     "test:watch": "vitest",
-    "start": "tsx src/cli.ts"
+    "start": "tsx src/cli.ts",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/x402-firewall/firewall.git"
+  },
+  "homepage": "https://github.com/x402-firewall/firewall#readme",
+  "bugs": {
+    "url": "https://github.com/x402-firewall/firewall/issues"
   },
   "keywords": [
     "x402",

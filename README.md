@@ -22,7 +22,7 @@ Add `x402-firewall` to your `claude_desktop_config.json` (`~/Library/Application
   "mcpServers": {
     "x402-firewall": {
       "command": "npx",
-      "args": ["-y", "x402-firewall"],
+      "args": ["-y", "@x402firewall/sdk"],
       "env": {
         "NETWORK": "base-sepolia",
         "PRIVATE_KEY": "0xYOUR_TESTNET_OR_MAINNET_PRIVATE_KEY",
