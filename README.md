@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/logo.svg" alt="x402Firewall Logo" width="480" />
+  <img src="./assets/logo.svg" alt="x402Firewall Logo" width="560" />
 </p>
 
 # 🔥 x402Firewall

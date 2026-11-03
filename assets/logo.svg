@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 190" width="760" height="190">
-  <rect width="760" height="190" fill="#000000"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 190" width="940" height="190">
+  <rect width="940" height="190" fill="#000000"/>
   
   <!-- 'x402' in official x402.org geometric letterforms -->
-  <g transform="translate(40, 32) scale(0.68)" fill="#FFFFFF">
+  <g transform="translate(50, 32) scale(0.68)" fill="#FFFFFF">
     <!-- 'x' -->
     <path d="M10.5,59.5c.6-.6,1.6-.6,2.3,0l50.9,50.9,19.5-19.5c.6-.6,1.6-.6,2.3,0l10,10c.6.6.6,1.7,0,2.3l-14.4,14.4v10.4l45.8,45.8c.6.6.6,1.7,0,2.3l-10,10c-.6.6-1.6.6-2.3,0l-50.9-50.9-50.9,50.9c-.6.6-1.6.6-2.3,0L.5,176.1c-.6-.6-.6-1.7,0-2.3l45.8-45.8v-10.4L.5,71.8c-.6-.6-.6-1.7,0-2.3l10-10Z"/>
     <!-- '4' -->
@@ -14,13 +14,13 @@
   </g>
 
   <!-- Slash divider -->
-  <line x1="410" y1="42" x2="390" y2="148" stroke="#444444" stroke-width="3" stroke-linecap="round"/>
+  <line x1="420" y1="42" x2="400" y2="148" stroke="#444444" stroke-width="3" stroke-linecap="round"/>
 
-  <!-- Minimal 'FIREWALL' wordmark in crisp technical grotesque typography -->
-  <text x="430" y="112" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Helvetica Neue', sans-serif" 
+  <!-- Minimal 'FIREWALL' wordmark in crisp technical typography -->
+  <text x="445" y="112" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Helvetica Neue', sans-serif" 
         font-weight="700" font-size="44" letter-spacing="8" fill="#FFFFFF">FIREWALL</text>
 
   <!-- Clean subtle descriptor tag -->
-  <text x="434" y="142" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', monospace" 
+  <text x="449" y="142" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', monospace" 
         font-weight="400" font-size="12" letter-spacing="3" fill="#888888">SECURITY INFRASTRUCTURE • BASE L2</text>
 </svg>
