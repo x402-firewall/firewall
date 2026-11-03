@@ -1,0 +1,59 @@
+{
+  "name": "@x402firewall/sdk",
+  "version": "0.1.0",
+  "description": "Smart Wallet Firewall & Auto-Pay Wrapper for AI Agents on Base L2",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "x402-firewall": "./dist/cli.js",
+    "x402firewall": "./dist/cli.js",
+    "x402firewall-mcp": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./config": {
+      "import": "./dist/config/index.js",
+      "types": "./dist/config/index.d.ts"
+    },
+    "./core": {
+      "import": "./dist/core/index.js",
+      "types": "./dist/core/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "LOG_LEVEL=error vitest run",
+    "test:watch": "vitest",
+    "start": "tsx src/cli.ts"
+  },
+  "keywords": [
+    "x402",
+    "ai-agent",
+    "smart-wallet",
+    "firewall",
+    "mcp",
+    "base",
+    "usdc",
+    "eip-3009"
+  ],
+  "author": "x402Firewall Team",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "better-sqlite3": "^11.8.1",
+    "dotenv": "^16.4.7",
+    "viem": "^2.23.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.13.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
