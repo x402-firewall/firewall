@@ -1,6 +1,6 @@
 {
   "name": "x402-firewall",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Smart Wallet Firewall & Auto-Pay Wrapper for AI Agents on Base L2",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,24 +17,34 @@
   ],
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./config": {
+      "types": "./dist/config/index.d.ts",
       "import": "./dist/config/index.js",
-      "types": "./dist/config/index.d.ts"
+      "require": "./dist/config/index.js",
+      "default": "./dist/config/index.js"
     },
     "./core": {
+      "types": "./dist/core/index.d.ts",
       "import": "./dist/core/index.js",
-      "types": "./dist/core/index.d.ts"
+      "require": "./dist/core/index.js",
+      "default": "./dist/core/index.js"
     },
     "./x402": {
+      "types": "./dist/x402/index.d.ts",
       "import": "./dist/x402/index.js",
-      "types": "./dist/x402/index.d.ts"
+      "require": "./dist/x402/index.js",
+      "default": "./dist/x402/index.js"
     },
     "./mcp": {
+      "types": "./dist/mcp/index.d.ts",
       "import": "./dist/mcp/index.js",
-      "types": "./dist/mcp/index.d.ts"
+      "require": "./dist/mcp/index.js",
+      "default": "./dist/mcp/index.js"
     }
   },
   "scripts": {
@@ -66,7 +76,7 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "better-sqlite3": "^11.8.1",
+    "better-sqlite3": "^13.0.3",
     "dotenv": "^16.4.7",
     "viem": "^2.23.0",
     "zod": "^3.24.2"
