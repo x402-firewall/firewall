@@ -87,12 +87,25 @@ export class PolicyEngine {
    * Deterministically evaluates a transaction or x402 payment against all security rules
    */
   public evaluate(req: EvaluationRequest): PolicyEvaluationResult {
-    const { amountUsdc, recipientAddress, domain, rawCalldata } = req;
+    const { amountUsdc, recipientAddress, domain, rawCalldata, nativeValueWei } = req;
     const currentHourlySpend = this.spendTracker.getHourlySpend();
     const currentDailySpend = this.spendTracker.getDailySpend();
 
     const remainingHourlyAllowance = Math.max(0, this.policy.maxHourlyUsdc - currentHourlySpend);
     const remainingDailyAllowance = Math.max(0, this.policy.maxDailyUsdc - currentDailySpend);
+
+    // Rule 0A: Positive finite amount check (prevents negative spend attacks & velocity reset exploits)
+    if (!Number.isFinite(amountUsdc) || amountUsdc < 0) {
+      const reason = `Policy violation: Invalid payment amount ($${amountUsdc} USDC). Amount must be a positive finite number`;
+      return this.handleViolation(reason, req, currentHourlySpend, currentDailySpend);
+    }
+
+    // Rule 0B: Native ETH Value Transfer Drain Protection
+    // x402 is an ERC-20 / USDC micro-payment standard. Uncontrolled native ETH transfers can drain funds.
+    if (nativeValueWei && nativeValueWei > 0n) {
+      const reason = `Policy violation: Unauthorized native ETH transfer blocked (${nativeValueWei.toString()} Wei). Native value transfers are forbidden under USDC micro-payment guardrails`;
+      return this.handleViolation(reason, req, currentHourlySpend, currentDailySpend);
+    }
 
     // Rule 1: Per-call limit check
     if (amountUsdc > this.policy.maxPerCallUsdc) {
@@ -239,15 +252,11 @@ export class PolicyEngine {
   private normalizeDomain(input: string): string {
     let clean = input.trim().toLowerCase();
     try {
-      if (clean.includes('://')) {
-        clean = new URL(clean).hostname;
-      } else if (clean.includes('/')) {
-        clean = clean.split('/')[0];
-      }
+      const url = clean.includes('://') ? new URL(clean) : new URL(`http://${clean}`);
+      return url.hostname;
     } catch {
-      // Keep trimmed value
+      return clean.split('/')[0].split(':')[0];
     }
-    return clean;
   }
 
   private matchDomain(domain: string, pattern: string): boolean {

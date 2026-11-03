@@ -62,7 +62,10 @@ export class SignerManager {
 
     const nowSeconds = Math.floor(Date.now() / 1000);
     const validAfter = params.validAfter ?? 0;
-    const validBefore = params.validBefore ?? (nowSeconds + 3600); // 1 hour validity default
+    // Security Guard: Defensively clamp validity to at most 24 hours to prevent unbounded authorizations
+    const maxAllowedValidBefore = nowSeconds + 86400;
+    const requestedValidBefore = params.validBefore ?? (nowSeconds + 3600); // 1 hour validity default
+    const validBefore = Math.min(requestedValidBefore, maxAllowedValidBefore);
     const nonce = params.nonce ?? (bytesToHex(crypto.randomBytes(32)) as Hex);
 
     const domain = {

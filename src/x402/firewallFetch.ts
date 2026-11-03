@@ -44,8 +44,9 @@ export function createFirewallFetch(options: FirewallFetchOptions): FirewallFetc
       ? input.toString()
       : input.url;
 
-    // 1. Execute initial HTTP request
-    const response = await fetch(input, init);
+    // 1. Execute initial HTTP request (clone if input is Request to keep stream available for retry)
+    const initialInput = input instanceof Request ? input.clone() : input;
+    const response = await fetch(initialInput, init);
 
     // 2. If status is NOT 402, return response immediately
     if (response.status !== 402) {
@@ -132,7 +133,8 @@ export function createFirewallFetch(options: FirewallFetchOptions): FirewallFetc
     });
 
     // 9. Execute retry request with signed authorization header
-    return fetch(input, retryInit);
+    const retryInput = input instanceof Request ? input.clone() : input;
+    return fetch(retryInput, retryInit);
   };
 }
 

@@ -232,5 +232,59 @@ describe('Adversarial & Prompt Injection Defense Tests', () => {
     expect(signer.toString()).not.toContain('1234567890abcdef');
     expect(signer.toString()).toContain(signer.getAddress());
   });
+
+  it('Attack Vector 10: Native ETH value drain protection', () => {
+    // Malicious injection tries to execute safe_tx with 1 ETH value transfer
+    const result = engine.evaluate({
+      amountUsdc: 0.01,
+      recipientAddress: TRUSTED_USDC,
+      nativeValueWei: 1000000000000000000n, // 1 ETH
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Unauthorized native ETH transfer blocked');
+  });
+
+  it('Attack Vector 11: Negative amount velocity reset exploit', () => {
+    // Malicious server or prompt injection sends negative amount to manipulate rolling spend
+    const result = engine.evaluate({
+      amountUsdc: -50.0,
+      recipientAddress: TRUSTED_USDC,
+      domain: 'api.trusted-service.com',
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Invalid payment amount');
+  });
+
+  it('Attack Vector 12: Bypassing approve via increaseAllowance selector (0x39509351)', () => {
+    // increaseAllowance(address, uint256) selector with MAX_UINT256
+    const increaseAllowanceCalldata = `0x395093510000000000000000000000006666666666666666666666666666666666666666ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff` as Hex;
+
+    const result = engine.evaluate({
+      amountUsdc: 0.01,
+      recipientAddress: TRUSTED_USDC,
+      domain: 'api.trusted-service.com',
+      rawCalldata: increaseAllowanceCalldata,
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('increaseAllowance');
+  });
+
+  it('Attack Vector 13: NFT & Token Drainer setApprovalForAll (0xa22cb465)', () => {
+    // setApprovalForAll(address operator, bool approved)
+    const setApprovalForAllCalldata = `0xa22cb46500000000000000000000000066666666666666666666666666666666666666660000000000000000000000000000000000000000000000000000000000000001` as Hex;
+
+    const result = engine.evaluate({
+      amountUsdc: 0.01,
+      recipientAddress: TRUSTED_USDC,
+      domain: 'api.trusted-service.com',
+      rawCalldata: setApprovalForAllCalldata,
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('setApprovalForAll');
+  });
 });
 
