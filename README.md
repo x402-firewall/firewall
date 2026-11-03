@@ -26,7 +26,7 @@ Add `x402-firewall` to your `claude_desktop_config.json` (`~/Library/Application
   "mcpServers": {
     "x402-firewall": {
       "command": "npx",
-      "args": ["-y", "@x402firewall/sdk"],
+      "args": ["-y", "x402-firewall"],
       "env": {
         "NETWORK": "base-sepolia",
         "PRIVATE_KEY": "0xYOUR_TESTNET_OR_MAINNET_PRIVATE_KEY",
@@ -148,7 +148,7 @@ Inspects recent permitted and blocked transactions from the local SQLite store.
 ## 💻 Programmatic SDK Usage
 
 ```typescript
-import { FirewallClient } from '@x402firewall/sdk';
+import { FirewallClient } from 'x402-firewall';
 
 const client = new FirewallClient({
   policy: {

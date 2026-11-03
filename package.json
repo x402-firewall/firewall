@@ -1,12 +1,11 @@
 {
-  "name": "@x402firewall/sdk",
+  "name": "x402-firewall",
   "version": "0.1.0",
   "description": "Smart Wallet Firewall & Auto-Pay Wrapper for AI Agents on Base L2",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "@x402firewall/sdk": "./dist/cli.js",
     "x402-firewall": "./dist/cli.js",
     "x402firewall": "./dist/cli.js",
     "x402firewall-mcp": "./dist/cli.js"

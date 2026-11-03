@@ -29,7 +29,7 @@ export function createMcpServer(client?: FirewallClient) {
 
   const server = new Server(
     {
-      name: '@x402firewall/mcp-server',
+      name: 'x402-firewall',
       version: '0.1.0',
     },
     {
