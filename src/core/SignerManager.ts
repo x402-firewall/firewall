@@ -56,7 +56,10 @@ export class SignerManager {
    * Signs EIP-712 / EIP-3009 transferWithAuthorization for native USDC on Base
    */
   public async signX402Payment(params: SignX402PaymentParams): Promise<SignedPaymentPayload> {
-    const network = params.network || this.#network;
+    if (params.network && params.network !== this.#network) {
+      throw new Error(`Security violation: Payment network '${params.network}' does not match signer network '${this.#network}'`);
+    }
+    const network = this.#network;
     const chainId = CHAIN_IDS[network];
     const verifyingContract = params.usdcAddress || USDC_ADDRESSES[network];
 
@@ -65,7 +68,12 @@ export class SignerManager {
     // Security Guard: Defensively clamp validity to at most 24 hours to prevent unbounded authorizations
     const maxAllowedValidBefore = nowSeconds + 86400;
     const requestedValidBefore = params.validBefore ?? (nowSeconds + 3600); // 1 hour validity default
-    const validBefore = Math.min(requestedValidBefore, maxAllowedValidBefore);
+    const validBefore = Math.max(nowSeconds + 60, Math.min(requestedValidBefore, maxAllowedValidBefore));
+
+    if (validAfter >= validBefore) {
+      throw new Error('Security violation: validAfter must be strictly less than validBefore');
+    }
+
     const nonce = params.nonce ?? (bytesToHex(crypto.randomBytes(32)) as Hex);
 
     const domain = {

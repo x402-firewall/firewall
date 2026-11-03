@@ -2,6 +2,7 @@ import type { Address } from 'viem';
 import type { SignerManager, SignedPaymentPayload } from '../core/SignerManager.js';
 import type { PaymentRequirement } from './parser.js';
 import { logger } from '../utils/logger.js';
+import { isSafeExternalUrl } from '../utils/webhook.js';
 
 export interface FacilitatorConfig {
   mode?: 'local' | 'cloud';
@@ -30,17 +31,26 @@ export class X402Facilitator {
   private config: FacilitatorConfig;
 
   constructor(config?: FacilitatorConfig) {
+    const rawCloudUrl = config?.cloudDashboardUrl || process.env.X402FIREWALL_CLOUD_URL || process.env.X402GUARD_CLOUD_URL || 'https://api.x402firewall.com';
+    if (rawCloudUrl && !isSafeExternalUrl(rawCloudUrl)) {
+      throw new Error(`Security violation: cloudDashboardUrl points to unsafe or internal address: ${rawCloudUrl}`);
+    }
+
     this.config = {
       mode: config?.mode || (process.env.X402FIREWALL_CLOUD_API_KEY || process.env.X402GUARD_CLOUD_API_KEY ? 'cloud' : 'local'),
       feeBps: config?.feeBps ?? 0,
       feeRecipient: config?.feeRecipient,
       cloudApiKey: config?.cloudApiKey || process.env.X402FIREWALL_CLOUD_API_KEY || process.env.X402GUARD_CLOUD_API_KEY,
-      cloudDashboardUrl: config?.cloudDashboardUrl || process.env.X402FIREWALL_CLOUD_URL || process.env.X402GUARD_CLOUD_URL || 'https://api.x402firewall.com',
+      cloudDashboardUrl: rawCloudUrl,
     };
   }
 
   public getConfig(): FacilitatorConfig {
-    return { ...this.config };
+    const { cloudApiKey, ...rest } = this.config;
+    return {
+      ...rest,
+      cloudApiKey: cloudApiKey ? '***REDACTED***' : undefined,
+    };
   }
 
   /**
@@ -50,6 +60,12 @@ export class X402Facilitator {
     req: PaymentRequirement,
     signer: SignerManager
   ): Promise<X402PaymentPayload> {
+    if (req.network !== signer.getNetwork()) {
+      throw new Error(
+        `Security violation: x402 payment requested network '${req.network}' does not match client signer network '${signer.getNetwork()}'`
+      );
+    }
+
     const signedAuth = await signer.signX402Payment({
       to: req.payTo,
       value: req.atomicAmount,

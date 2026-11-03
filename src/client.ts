@@ -80,70 +80,83 @@ export class FirewallClient {
   }
 
   public async executeSafeTx(params: SafeTxParams): Promise<SafeTxResult> {
-    const amountUsdc = params.amountUsdc ?? 0;
+    return this.policyEngine.withLock(async () => {
+      let amountUsdc = params.amountUsdc ?? 0;
 
-    // 1. Policy Evaluation
-    const evalResult = this.policyEngine.evaluate({
-      amountUsdc,
-      recipientAddress: params.to,
-      rawCalldata: params.data,
-      nativeValueWei: params.value,
-    });
+      // Extract amount from calldata if calldata is a direct token transfer and caller provided 0 or omitted it
+      if (params.data && params.data.length >= 138) {
+        const inspection = this.evmSimulator.inspectCalldata(
+          params.data,
+          this.policyEngine.getPolicy().maxPerCallUsdc,
+          this.policyEngine.getPolicy().blockUnlimitedApprovals
+        );
+        if (inspection.functionName === 'transfer' && inspection.decodedParams?.amountUsdc) {
+          amountUsdc = Math.max(amountUsdc, inspection.decodedParams.amountUsdc);
+        }
+      }
 
-    if (!evalResult.allowed) {
-      logger.warn('Safe transaction rejected by PolicyEngine firewall', {
-        reason: evalResult.reason,
-        to: params.to,
+      // 1. Policy Evaluation
+      const evalResult = this.policyEngine.evaluate({
+        amountUsdc,
+        recipientAddress: params.to,
+        rawCalldata: params.data,
+        nativeValueWei: params.value,
       });
-      return {
-        success: false,
-        reason: evalResult.reason,
-      };
-    }
 
-    // 2. Pre-execution Simulation via EVM Simulator
-    const simResult = await this.evmSimulator.simulateTx({
-      to: params.to,
-      data: params.data,
-      value: params.value,
-      account: this.signerManager.getAddress(),
-    });
+      if (!evalResult.allowed) {
+        logger.warn('Safe transaction rejected by PolicyEngine firewall', {
+          reason: evalResult.reason,
+          to: params.to,
+        });
+        return {
+          success: false,
+          reason: evalResult.reason,
+        };
+      }
 
-    if (!simResult.success) {
-      this.spendTracker.recordBlocked({
+      // 2. Pre-execution Simulation via EVM Simulator
+      const simResult = await this.evmSimulator.simulateTx({
+        to: params.to,
+        data: params.data,
+        value: params.value,
+        account: this.signerManager.getAddress(),
+      });
+
+      if (!simResult.success) {
+        this.spendTracker.recordBlocked({
+          amountUsdc,
+          recipient: params.to,
+          reason: `Simulation reverted: ${simResult.error}`,
+          calldata: params.data,
+        });
+        return {
+          success: false,
+          reason: `Transaction simulation failed: ${simResult.error}`,
+          simulation: simResult,
+        };
+      }
+
+      // 3. Sign Transaction
+      const signedTx = await this.signerManager.signTransaction({
+        to: params.to,
+        data: params.data,
+        value: params.value ? BigInt(params.value) : 0n,
+      } as Parameters<typeof this.signerManager.signTransaction>[0]);
+
+      // 4. Record spend in tracker
+      this.policyEngine.recordAllowedSpend({
         amountUsdc,
         recipient: params.to,
-        reason: `Simulation reverted: ${simResult.error}`,
-        calldata: params.data,
+        txHash: signedTx,
       });
+
       return {
-        success: false,
-        reason: `Transaction simulation failed: ${simResult.error}`,
+        success: true,
+        signedTx,
+        txHash: signedTx,
         simulation: simResult,
       };
-    }
-
-    // 3. Sign Transaction
-    const signedTx = await this.signerManager.signTransaction({
-      to: params.to,
-      data: params.data,
-      value: params.value,
-      chainId: undefined,
-    } as any);
-
-    // 4. Record spend in tracker
-    this.policyEngine.recordAllowedSpend({
-      amountUsdc,
-      recipient: params.to,
-      txHash: signedTx,
     });
-
-    return {
-      success: true,
-      signedTx,
-      txHash: signedTx,
-      simulation: simResult,
-    };
   }
 
   public close(): void {

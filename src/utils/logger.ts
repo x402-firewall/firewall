@@ -23,14 +23,31 @@ class Logger {
     return LEVEL_PRIORITY[level] >= LEVEL_PRIORITY[this.minLevel];
   }
 
+  private sanitizeMeta(meta?: Record<string, unknown>): Record<string, unknown> | undefined {
+    if (!meta) return undefined;
+    const sensitivePattern = /(?:private_?key|api_?key|secret|password|bearer|auth)/i;
+    const sanitized: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(meta)) {
+      if (sensitivePattern.test(k)) {
+        sanitized[k] = '***REDACTED***';
+      } else if (v && typeof v === 'object' && !Array.isArray(v)) {
+        sanitized[k] = this.sanitizeMeta(v as Record<string, unknown>);
+      } else {
+        sanitized[k] = v;
+      }
+    }
+    return sanitized;
+  }
+
   private output(level: LogLevel, message: string, meta?: Record<string, unknown>) {
     if (!this.shouldLog(level)) return;
 
+    const sanitizedMeta = this.sanitizeMeta(meta);
     const logEntry = {
       timestamp: new Date().toISOString(),
       level: level.toUpperCase(),
       message,
-      ...(meta && Object.keys(meta).length > 0 ? { meta } : {}),
+      ...(sanitizedMeta && Object.keys(sanitizedMeta).length > 0 ? { meta: sanitizedMeta } : {}),
     };
 
     // CRITICAL FOR MCP: Write exclusively to stderr to protect stdout for JSON-RPC

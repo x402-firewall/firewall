@@ -142,9 +142,21 @@ export class EvmSimulator {
           decodedParams: {
             spender,
             amountRaw,
+            amountUsdc: Number(amountRaw) / 10 ** USDC_DECIMALS,
           },
         };
       }
+
+      return {
+        isSafe: true,
+        selector,
+        functionName: 'increaseAllowance',
+        decodedParams: {
+          spender,
+          amountRaw,
+          amountUsdc: Number(amountRaw) / 10 ** USDC_DECIMALS,
+        },
+      };
     }
 
     // 3. ERC-721 / ERC-1155 setApprovalForAll(address operator, bool approved) - selector 0xa22cb465
@@ -177,6 +189,16 @@ export class EvmSimulator {
       };
     }
 
+    // 5b. Dangerous NFT / Token Drainer Selector: safeTransferFrom with data (0xb88d4fde)
+    if (selector === DANGEROUS_SELECTORS.SAFE_TRANSFER_FROM_ERC721_WITH_DATA) {
+      return {
+        isSafe: false,
+        reason: 'Policy violation: Blocked dangerous ERC-721 safeTransferFrom selector with data (0xb88d4fde)',
+        selector,
+        functionName: 'safeTransferFrom',
+      };
+    }
+
     // 6. transferFrom (0x23b872dd)
     if (selector === DANGEROUS_SELECTORS.TRANSFER_FROM) {
       return {
@@ -187,13 +209,23 @@ export class EvmSimulator {
       };
     }
 
-    // 7. ERC-1155 safeTransferFrom (0xb88d4fde)
+    // 7. ERC-1155 safeTransferFrom (0xf242432a)
     if (selector === DANGEROUS_SELECTORS.SAFE_TRANSFER_FROM_ERC1155) {
       return {
         isSafe: false,
-        reason: 'Policy violation: Blocked dangerous ERC-1155 safeTransferFrom selector (0xb88d4fde)',
+        reason: 'Policy violation: Blocked dangerous ERC-1155 safeTransferFrom selector (0xf242432a)',
         selector,
         functionName: 'safeTransferFrom',
+      };
+    }
+
+    // 7b. ERC-1155 safeBatchTransferFrom (0x2eb2c2d6)
+    if (selector === DANGEROUS_SELECTORS.SAFE_BATCH_TRANSFER_FROM_ERC1155) {
+      return {
+        isSafe: false,
+        reason: 'Policy violation: Blocked dangerous ERC-1155 safeBatchTransferFrom selector (0x2eb2c2d6)',
+        selector,
+        functionName: 'safeBatchTransferFrom',
       };
     }
 

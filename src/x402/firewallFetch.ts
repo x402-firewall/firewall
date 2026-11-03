@@ -69,6 +69,20 @@ export function createFirewallFetch(options: FirewallFetchOptions): FirewallFetc
       return response;
     }
 
+    // Security check: Trust boundary violation prevention
+    // Verify that the requested network matches our signer network
+    if (requirement.network !== signerManager.getNetwork()) {
+      const errorMsg = `Security violation: x402 response requested network '${requirement.network}' does not match client network '${signerManager.getNetwork()}'`;
+      logger.error(errorMsg, { url: urlString });
+      if (throwOnViolation) {
+        throw new PolicyViolationError(errorMsg, {
+          amountUsdc: requirement.maxAmountRequired,
+          recipientAddress: requirement.payTo,
+        });
+      }
+      return response;
+    }
+
     // 4. Extract domain from target URL for allowlist checking
     let domain: string | undefined;
     try {
@@ -77,53 +91,61 @@ export function createFirewallFetch(options: FirewallFetchOptions): FirewallFetc
       // Fallback
     }
 
-    // 5. Evaluate proposed payment with PolicyEngine
-    const evaluation = policyEngine.evaluate({
-      amountUsdc: requirement.maxAmountRequired,
-      recipientAddress: requirement.payTo,
-      domain,
-    });
-
-    if (!evaluation.allowed) {
-      logger.warn('x402 payment BLOCKED by PolicyEngine firewall', {
-        reason: evaluation.reason,
+    // 5-7. Evaluate, Sign, and Record Spend atomically under concurrency lock (eliminates TOCTOU)
+    const encodedPayment = await policyEngine.withLock(async () => {
+      const evaluation = policyEngine.evaluate({
         amountUsdc: requirement.maxAmountRequired,
-        payTo: requirement.payTo,
-        url: urlString,
+        recipientAddress: requirement.payTo,
+        domain,
       });
 
-      if (throwOnViolation) {
-        throw new PolicyViolationError(
-          evaluation.reason || 'Payment rejected by firewall policy',
-          {
-            amountUsdc: requirement.maxAmountRequired,
-            recipientAddress: requirement.payTo,
-            domain,
-          }
-        );
+      if (!evaluation.allowed) {
+        logger.warn('x402 payment BLOCKED by PolicyEngine firewall', {
+          reason: evaluation.reason,
+          amountUsdc: requirement.maxAmountRequired,
+          payTo: requirement.payTo,
+          url: urlString,
+        });
+
+        if (throwOnViolation) {
+          throw new PolicyViolationError(
+            evaluation.reason || 'Payment rejected by firewall policy',
+            {
+              amountUsdc: requirement.maxAmountRequired,
+              recipientAddress: requirement.payTo,
+              domain,
+            }
+          );
+        }
+        return null;
       }
+
+      // 6. Sign EIP-3009 payment authorization payload
+      const paymentPayload = await facilitator.createPaymentPayload(requirement, signerManager);
+      const encoded = facilitator.encodeHeader(paymentPayload);
+
+      // 7. Record allowed spend in SQLite audit log
+      policyEngine.recordAllowedSpend({
+        amountUsdc: requirement.maxAmountRequired,
+        recipient: requirement.payTo,
+        domain,
+      });
+
+      return encoded;
+    });
+
+    if (!encodedPayment) {
       return response;
     }
-
-    // 6. Sign EIP-3009 payment authorization payload
-    const paymentPayload = await facilitator.createPaymentPayload(requirement, signerManager);
-    const encodedPayment = facilitator.encodeHeader(paymentPayload);
-
-    // 7. Record allowed spend in SQLite audit log
-    policyEngine.recordAllowedSpend({
-      amountUsdc: requirement.maxAmountRequired,
-      recipient: requirement.payTo,
-      domain,
-    });
 
     // 8. Prepare retry request headers with X-PAYMENT
     const retryHeaders = new Headers(init?.headers);
     retryHeaders.set('X-PAYMENT', encodedPayment);
-    retryHeaders.set('x-payment', encodedPayment);
 
     const retryInit: RequestInit = {
       ...init,
       headers: retryHeaders,
+      signal: init?.signal || AbortSignal.timeout(30000),
     };
 
     logger.info('Submitting signed x402 payment retry', {

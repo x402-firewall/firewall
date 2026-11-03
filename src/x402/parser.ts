@@ -27,8 +27,8 @@ const RawPaymentRequirementSchema = z.object({
   atomicAmount: z.union([z.string(), z.number(), z.bigint()]).optional(),
   resource: z.string().optional(),
   description: z.string().optional(),
-  validBefore: z.number().optional(),
-}).passthrough();
+  validBefore: z.number().int().positive().optional(),
+});
 
 /**
  * Normalizes payment amount from various representations (decimal USDC vs atomic units)
@@ -40,6 +40,9 @@ function normalizeAmount(data: z.infer<typeof RawPaymentRequirementSchema>): {
   // If atomicAmount is explicitly provided (e.g., 50000)
   if (data.atomicAmount !== undefined) {
     const atomic = BigInt(data.atomicAmount.toString());
+    if (atomic < 0n) {
+      throw new Error(`Invalid atomic payment amount: ${atomic}`);
+    }
     const usdc = Number(atomic) / 10 ** USDC_DECIMALS;
     return { usdcAmount: usdc, atomicAmount: atomic };
   }
@@ -51,12 +54,10 @@ function normalizeAmount(data: z.infer<typeof RawPaymentRequirementSchema>): {
   }
 
   const numVal = typeof rawVal === 'string' ? parseFloat(rawVal) : rawVal;
-  if (isNaN(numVal) || numVal < 0) {
-    throw new Error(`Invalid payment amount: ${rawVal}`);
+  if (!Number.isFinite(numVal) || numVal < 0 || numVal > 1_000_000) {
+    throw new Error(`Invalid payment amount: ${rawVal} (must be a positive number <= 1,000,000 USDC)`);
   }
 
-  // Heuristic: If amount is >= 1000 and has no decimal point in string form,
-  // check if it's atomic units or whole dollars. In x402, values < 100 are typical USDC decimal amounts.
   // Standard x402 specification uses decimal dollar amounts in maxAmountRequired (e.g., 0.05)
   const atomic = BigInt(Math.round(numVal * 10 ** USDC_DECIMALS));
   return { usdcAmount: numVal, atomicAmount: atomic };
@@ -92,8 +93,18 @@ export async function parsePaymentRequirements(response: Response): Promise<Paym
   // 2. If not found in headers, attempt to parse JSON body
   if (!parsedRaw) {
     try {
+      const contentLength = response.headers.get('content-length');
+      if (contentLength && parseInt(contentLength, 10) > 1_000_000) {
+        throw new Error('402 response body exceeds 1MB limit');
+      }
+
       const cloned = response.clone();
-      const bodyJson = (await cloned.json()) as Record<string, unknown>;
+      const bodyText = await cloned.text();
+      if (bodyText.length > 1_000_000) {
+        throw new Error('402 response body text exceeds 1MB limit');
+      }
+
+      const bodyJson = JSON.parse(bodyText) as Record<string, unknown>;
 
       if (bodyJson && typeof bodyJson === 'object') {
         parsedRaw =
@@ -114,6 +125,14 @@ export async function parsePaymentRequirements(response: Response): Promise<Paym
   const validated = RawPaymentRequirementSchema.parse(parsedRaw);
   const { usdcAmount, atomicAmount } = normalizeAmount(validated);
 
+  // Defensively strip any prototype pollution vectors from extra
+  const safeExtra: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(validated)) {
+    if (key !== '__proto__' && key !== 'constructor' && key !== 'prototype') {
+      safeExtra[key] = val;
+    }
+  }
+
   return {
     scheme: validated.scheme,
     network: validated.network,
@@ -124,6 +143,6 @@ export async function parsePaymentRequirements(response: Response): Promise<Paym
     resource: validated.resource,
     description: validated.description,
     validBefore: validated.validBefore,
-    extra: validated,
+    extra: safeExtra,
   };
 }

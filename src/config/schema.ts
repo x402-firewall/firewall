@@ -14,9 +14,9 @@ export const AddressSchema = z
 export const FirewallPolicySchema = z
   .object({
     network: NetworkSchema.default(DEFAULT_POLICY_VALUES.network),
-    maxPerCallUsdc: z.number().positive({ message: 'maxPerCallUsdc must be positive' }).default(DEFAULT_POLICY_VALUES.maxPerCallUsdc),
-    maxHourlyUsdc: z.number().positive({ message: 'maxHourlyUsdc must be positive' }).default(DEFAULT_POLICY_VALUES.maxHourlyUsdc),
-    maxDailyUsdc: z.number().positive({ message: 'maxDailyUsdc must be positive' }).default(DEFAULT_POLICY_VALUES.maxDailyUsdc),
+    maxPerCallUsdc: z.number().positive({ message: 'maxPerCallUsdc must be positive' }).finite({ message: 'maxPerCallUsdc must be finite' }).default(DEFAULT_POLICY_VALUES.maxPerCallUsdc),
+    maxHourlyUsdc: z.number().positive({ message: 'maxHourlyUsdc must be positive' }).finite({ message: 'maxHourlyUsdc must be finite' }).default(DEFAULT_POLICY_VALUES.maxHourlyUsdc),
+    maxDailyUsdc: z.number().positive({ message: 'maxDailyUsdc must be positive' }).finite({ message: 'maxDailyUsdc must be finite' }).default(DEFAULT_POLICY_VALUES.maxDailyUsdc),
     allowedDomains: z.array(z.string()).default(DEFAULT_POLICY_VALUES.allowedDomains),
     allowedContracts: z.array(AddressSchema).default(DEFAULT_POLICY_VALUES.allowedContracts),
     blockUnlimitedApprovals: z.boolean().default(DEFAULT_POLICY_VALUES.blockUnlimitedApprovals),
@@ -56,17 +56,17 @@ export const EnvConfigSchema = z.object({
   MAX_PER_CALL_USDC: z
     .string()
     .transform((val) => parseFloat(val))
-    .pipe(z.number().positive())
+    .pipe(z.number().positive().finite())
     .optional(),
   MAX_HOURLY_USDC: z
     .string()
     .transform((val) => parseFloat(val))
-    .pipe(z.number().positive())
+    .pipe(z.number().positive().finite())
     .optional(),
   MAX_DAILY_USDC: z
     .string()
     .transform((val) => parseFloat(val))
-    .pipe(z.number().positive())
+    .pipe(z.number().positive().finite())
     .optional(),
   ALLOWED_DOMAINS: z
     .string()
@@ -74,7 +74,8 @@ export const EnvConfigSchema = z.object({
     .optional(),
   ALLOWED_CONTRACTS: z
     .string()
-    .transform((val) => (val ? val.split(',').map((s) => s.trim().toLowerCase() as `0x${string}`).filter(Boolean) : []))
+    .transform((val) => (val ? val.split(',').map((s) => s.trim()).filter(Boolean) : []))
+    .pipe(z.array(AddressSchema))
     .optional(),
   BLOCK_UNLIMITED_APPROVALS: z
     .string()

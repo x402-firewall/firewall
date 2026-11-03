@@ -33,6 +33,10 @@ export interface BudgetStatus {
   remainingDailyAllowance: number;
 }
 
+export function roundUsdc(amount: number): number {
+  return Math.round((amount + Number.EPSILON) * 1_000_000) / 1_000_000;
+}
+
 export class PolicyViolationError extends Error {
   public readonly reason: string;
   public readonly details: Partial<EvaluationRequest>;
@@ -49,6 +53,7 @@ export class PolicyEngine {
   private policy: FirewallPolicy;
   private spendTracker: SpendTracker;
   private evmSimulator: EvmSimulator;
+  private mutexQueue: Promise<void> = Promise.resolve();
 
   constructor(
     policy?: Partial<FirewallPolicy>,
@@ -60,6 +65,26 @@ export class PolicyEngine {
     this.evmSimulator = evmSimulator || new EvmSimulator(this.policy.network);
   }
 
+  /**
+   * Concurrency lock to prevent TOCTOU race conditions during evaluation, signing, and spend recording
+   */
+  public async withLock<T>(fn: () => Promise<T>): Promise<T> {
+    let release: () => void;
+    const waitPromise = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const previousQueue = this.mutexQueue;
+    this.mutexQueue = this.mutexQueue.then(() => waitPromise);
+
+    await previousQueue;
+    try {
+      return await fn();
+    } finally {
+      release!();
+    }
+  }
+
   public getPolicy(): FirewallPolicy {
     return this.policy;
   }
@@ -69,8 +94,8 @@ export class PolicyEngine {
   }
 
   public getBudgetStatus(): BudgetStatus {
-    const currentHourlySpend = this.spendTracker.getHourlySpend();
-    const currentDailySpend = this.spendTracker.getDailySpend();
+    const currentHourlySpend = roundUsdc(this.spendTracker.getHourlySpend());
+    const currentDailySpend = roundUsdc(this.spendTracker.getDailySpend());
 
     return {
       maxPerCallUsdc: this.policy.maxPerCallUsdc,
@@ -78,8 +103,8 @@ export class PolicyEngine {
       maxDailyUsdc: this.policy.maxDailyUsdc,
       currentHourlySpend,
       currentDailySpend,
-      remainingHourlyAllowance: Math.max(0, this.policy.maxHourlyUsdc - currentHourlySpend),
-      remainingDailyAllowance: Math.max(0, this.policy.maxDailyUsdc - currentDailySpend),
+      remainingHourlyAllowance: Math.max(0, roundUsdc(this.policy.maxHourlyUsdc - currentHourlySpend)),
+      remainingDailyAllowance: Math.max(0, roundUsdc(this.policy.maxDailyUsdc - currentDailySpend)),
     };
   }
 
@@ -88,11 +113,11 @@ export class PolicyEngine {
    */
   public evaluate(req: EvaluationRequest): PolicyEvaluationResult {
     const { amountUsdc, recipientAddress, domain, rawCalldata, nativeValueWei } = req;
-    const currentHourlySpend = this.spendTracker.getHourlySpend();
-    const currentDailySpend = this.spendTracker.getDailySpend();
+    const currentHourlySpend = roundUsdc(this.spendTracker.getHourlySpend());
+    const currentDailySpend = roundUsdc(this.spendTracker.getDailySpend());
 
-    const remainingHourlyAllowance = Math.max(0, this.policy.maxHourlyUsdc - currentHourlySpend);
-    const remainingDailyAllowance = Math.max(0, this.policy.maxDailyUsdc - currentDailySpend);
+    const remainingHourlyAllowance = Math.max(0, roundUsdc(this.policy.maxHourlyUsdc - currentHourlySpend));
+    const remainingDailyAllowance = Math.max(0, roundUsdc(this.policy.maxDailyUsdc - currentDailySpend));
 
     // Rule 0A: Positive finite amount check (prevents negative spend attacks & velocity reset exploits)
     if (!Number.isFinite(amountUsdc) || amountUsdc < 0) {
@@ -107,20 +132,22 @@ export class PolicyEngine {
       return this.handleViolation(reason, req, currentHourlySpend, currentDailySpend);
     }
 
+    const roundedAmount = roundUsdc(amountUsdc);
+
     // Rule 1: Per-call limit check
-    if (amountUsdc > this.policy.maxPerCallUsdc) {
+    if (roundedAmount > roundUsdc(this.policy.maxPerCallUsdc)) {
       const reason = `Per-call spend limit exceeded: requested $${amountUsdc.toFixed(4)} USDC > limit of $${this.policy.maxPerCallUsdc.toFixed(4)} USDC`;
       return this.handleViolation(reason, req, currentHourlySpend, currentDailySpend);
     }
 
     // Rule 2: Hourly velocity limit check
-    if (currentHourlySpend + amountUsdc > this.policy.maxHourlyUsdc) {
+    if (roundUsdc(currentHourlySpend + roundedAmount) > roundUsdc(this.policy.maxHourlyUsdc)) {
       const reason = `Hourly spend limit exceeded: requesting $${amountUsdc.toFixed(4)} USDC + current spend $${currentHourlySpend.toFixed(4)} USDC > limit of $${this.policy.maxHourlyUsdc.toFixed(4)} USDC (remaining: $${remainingHourlyAllowance.toFixed(4)} USDC)`;
       return this.handleViolation(reason, req, currentHourlySpend, currentDailySpend);
     }
 
     // Rule 3: Daily velocity limit check
-    if (currentDailySpend + amountUsdc > this.policy.maxDailyUsdc) {
+    if (roundUsdc(currentDailySpend + roundedAmount) > roundUsdc(this.policy.maxDailyUsdc)) {
       const reason = `Daily spend limit exceeded: requesting $${amountUsdc.toFixed(4)} USDC + current spend $${currentDailySpend.toFixed(4)} USDC > limit of $${this.policy.maxDailyUsdc.toFixed(4)} USDC (remaining: $${remainingDailyAllowance.toFixed(4)} USDC)`;
       return this.handleViolation(reason, req, currentHourlySpend, currentDailySpend);
     }
@@ -253,9 +280,9 @@ export class PolicyEngine {
     let clean = input.trim().toLowerCase();
     try {
       const url = clean.includes('://') ? new URL(clean) : new URL(`http://${clean}`);
-      return url.hostname;
+      return url.hostname.replace(/\.+$/, '');
     } catch {
-      return clean.split('/')[0].split(':')[0];
+      return clean.split('/')[0].split(':')[0].replace(/\.+$/, '');
     }
   }
 

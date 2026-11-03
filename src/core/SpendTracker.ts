@@ -44,7 +44,7 @@ export class SpendTracker {
     if (resolvedPath !== ':memory:') {
       const dir = path.dirname(resolvedPath);
       if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+        fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
       }
     }
 
@@ -81,7 +81,11 @@ export class SpendTracker {
 
   public recordSpend(params: RecordSpendParams): AuditLogRecord {
     this.assertOpen();
-    const timestamp = params.timestamp ?? Date.now();
+    const now = Date.now();
+    const timestamp = params.timestamp ?? now;
+    if (!Number.isFinite(timestamp) || timestamp < 0 || timestamp > now + 60_000) {
+      throw new Error(`Invalid spend timestamp: ${timestamp}`);
+    }
     const isoString = new Date(timestamp).toISOString();
 
     const stmt = this.db.prepare(`
@@ -120,7 +124,11 @@ export class SpendTracker {
 
   public recordBlocked(params: RecordBlockedParams): AuditLogRecord {
     this.assertOpen();
-    const timestamp = params.timestamp ?? Date.now();
+    const now = Date.now();
+    const timestamp = params.timestamp ?? now;
+    if (!Number.isFinite(timestamp) || timestamp < 0 || timestamp > now + 60_000) {
+      throw new Error(`Invalid blocked record timestamp: ${timestamp}`);
+    }
     const isoString = new Date(timestamp).toISOString();
 
     const stmt = this.db.prepare(`
@@ -185,6 +193,7 @@ export class SpendTracker {
     filter?: { status?: 'ALLOWED' | 'BLOCKED' }
   ): AuditLogRecord[] {
     this.assertOpen();
+    const safeLimit = Math.min(Math.max(1, limit), 1000);
     if (filter?.status) {
       const stmt = this.db.prepare(`
         SELECT id, timestamp, amount_usdc, recipient, domain, tx_hash, status, reason, calldata, created_at
@@ -193,7 +202,7 @@ export class SpendTracker {
         ORDER BY timestamp DESC
         LIMIT ?
       `);
-      return stmt.all(filter.status, limit) as AuditLogRecord[];
+      return stmt.all(filter.status, safeLimit) as AuditLogRecord[];
     }
 
     const stmt = this.db.prepare(`
@@ -202,7 +211,7 @@ export class SpendTracker {
       ORDER BY timestamp DESC
       LIMIT ?
     `);
-    return stmt.all(limit) as AuditLogRecord[];
+    return stmt.all(safeLimit) as AuditLogRecord[];
   }
 
   public clear(): void {
