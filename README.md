@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./assets/logo.svg" alt="x402Firewall Logo" width="480" />
+</p>
+
 # 🔥 x402Firewall
 
 **Smart Wallet Firewall & Auto-Pay Wrapper for AI Agents on Base L2**
@@ -6,7 +10,7 @@
 [![Base L2](https://img.shields.io/badge/Blockchain-Base%20L2-0052FF.svg)](https://base.org)
 [![x402](https://img.shields.io/badge/Protocol-x402%20Standard-success.svg)](https://x402.org)
 [![Zero-Cost SQLite](https://img.shields.io/badge/State-Local%20SQLite-lightgrey.svg)](https://sqlite.org)
-[![Tests](https://img.shields.io/badge/Tests-36%20Passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-58%20Passed-brightgreen.svg)]()
 
 > Allow AI agents (Claude, Cursor, custom bots) to autonomously query and pay for `x402` (HTTP 402 Payment Required) APIs and execute EVM transactions on Base L2 with strict, deterministic spending caps, allowlists, and pre-execution transaction simulation.
 
