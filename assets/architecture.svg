@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 720" width="1080" height="720">
+  <defs>
+    <style>
+      .bg { fill: #000000; }
+      .box-bg { fill: #0d0d0d; stroke: #262626; stroke-width: 1.5; rx: 8px; }
+      .firewall-box { fill: #080808; stroke: #333333; stroke-width: 1.5; rx: 12px; }
+      .inner-box { fill: #121212; stroke: #262626; stroke-width: 1.2; rx: 6px; }
+      .title { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif; font-weight: 700; fill: #FFFFFF; }
+      .mono-title { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-weight: 600; fill: #FFFFFF; font-size: 13px; letter-spacing: 0.5px; }
+      .mono-body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11.5px; fill: #A1A1AA; }
+      .mono-muted { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 10.5px; fill: #71717A; }
+      .tag-pass { fill: #064e3b; stroke: #059669; stroke-width: 1; rx: 4px; }
+      .tag-pass-text { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px; font-weight: 700; fill: #34d399; letter-spacing: 0.5px; }
+      .tag-violation { fill: #4c0519; stroke: #e11d48; stroke-width: 1; rx: 4px; }
+      .tag-violation-text { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px; font-weight: 700; fill: #fb7185; letter-spacing: 0.5px; }
+      .line { stroke: #3f3f46; stroke-width: 1.5; fill: none; }
+      .line-accent { stroke: #52525b; stroke-width: 1.5; fill: none; }
+    </style>
+
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#71717a" />
+    </marker>
+    <marker id="arrowhead-pass" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#059669" />
+    </marker>
+    <marker id="arrowhead-fail" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#e11d48" />
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1080" height="720" class="bg" />
+
+  <!-- 1. TOP NODE: AI Agent Host -->
+  <g transform="translate(330, 24)">
+    <rect width="420" height="58" class="box-bg" />
+    <text x="210" y="26" text-anchor="middle" class="title" font-size="14">AI Agent Host Environment</text>
+    <text x="210" y="44" text-anchor="middle" class="mono-muted">Claude Desktop • Cursor • Autonomous Bot Runtimes</text>
+  </g>
+
+  <!-- Connection: Top -> Firewall -->
+  <line x1="540" y1="82" x2="540" y2="124" class="line" marker-end="url(#arrowhead)" />
+  <rect x="445" y="94" width="190" height="18" fill="#000000" rx="3" />
+  <text x="540" y="107" text-anchor="middle" class="mono-muted" font-size="10.5">MCP Tools (JSON-RPC) / SDK</text>
+
+  <!-- 2. MAIN FIREWALL CONTAINER -->
+  <rect x="50" y="126" width="980" height="428" class="firewall-box" />
+  <g transform="translate(70, 150)">
+    <text x="0" y="0" class="mono-title" font-size="12" fill="#71717A">x402-firewall &lt;security-perimeter&gt;</text>
+  </g>
+
+  <!-- 2A. Inbound Request Box -->
+  <g transform="translate(80, 172)">
+    <rect width="250" height="114" class="inner-box" />
+    <text x="18" y="26" class="mono-title">Inbound Request</text>
+    <text x="18" y="50" class="mono-body">• HTTP 402 Challenge</text>
+    <text x="18" y="68" class="mono-body">• EVM Transaction Calldata</text>
+    <text x="18" y="92" class="mono-muted">Triggered by agent fetch / tool call</text>
+  </g>
+
+  <!-- Connection: Inbound -> Policy Engine -->
+  <line x1="330" y1="229" x2="438" y2="229" class="line" marker-end="url(#arrowhead)" />
+  <rect x="345" y="220" width="78" height="16" fill="#080808" />
+  <text x="384" y="232" text-anchor="middle" class="mono-muted" font-size="10">evaluates</text>
+
+  <!-- 2B. Policy Engine Box -->
+  <g transform="translate(440, 166)">
+    <rect width="560" height="126" class="inner-box" />
+    <text x="24" y="26" class="mono-title">Policy Engine &amp; Spending Caps</text>
+    <text x="24" y="50" class="mono-body">• Per-Call Max Spend Cap (e.g. $0.05 USDC)</text>
+    <text x="24" y="68" class="mono-body">• Rolling 1-Hour ($1.00) &amp; 24-Hour ($5.00) Velocity Ceilings</text>
+    <text x="24" y="86" class="mono-body">• Domain Allowlists &amp; Strict Hostname Canonicalization</text>
+    <text x="24" y="104" class="mono-body">• Dangerous Calldata &amp; Drainer Selector Blacklist</text>
+  </g>
+
+  <!-- Branch Split from Policy Engine -->
+  <line x1="720" y1="292" x2="720" y2="322" class="line" />
+  <line x1="380" y1="322" x2="860" y2="322" class="line" />
+
+  <!-- Left drop to PASS -->
+  <line x1="380" y1="322" x2="380" y2="344" stroke="#059669" stroke-width="1.5" marker-end="url(#arrowhead-pass)" />
+  <!-- Right drop to VIOLATION -->
+  <line x1="860" y1="322" x2="860" y2="344" stroke="#e11d48" stroke-width="1.5" marker-end="url(#arrowhead-fail)" />
+
+  <!-- PASS Tag -->
+  <g transform="translate(265, 346)">
+    <rect width="230" height="26" class="tag-pass" />
+    <text x="115" y="17" text-anchor="middle" class="tag-pass-text">PASS: Under Caps &amp; Verified</text>
+  </g>
+
+  <!-- VIOLATION Tag -->
+  <g transform="translate(745, 346)">
+    <rect width="230" height="26" class="tag-violation" />
+    <text x="115" y="17" text-anchor="middle" class="tag-violation-text">VIOLATION: Denied / Over Cap</text>
+  </g>
+
+  <!-- Pass Actions (EvmSimulator & SignerManager) -->
+  <line x1="380" y1="372" x2="380" y2="396" class="line" />
+  <line x1="220" y1="396" x2="520" y2="396" class="line" />
+  <line x1="220" y1="396" x2="220" y2="414" class="line" marker-end="url(#arrowhead)" />
+  <line x1="520" y1="396" x2="520" y2="414" class="line" marker-end="url(#arrowhead)" />
+
+  <!-- 2C. EvmSimulator Box -->
+  <g transform="translate(90, 416)">
+    <rect width="260" height="110" class="inner-box" />
+    <text x="16" y="26" class="mono-title">EvmSimulator</text>
+    <text x="16" y="48" class="mono-body">• Pre-flight eth_call simulation</text>
+    <text x="16" y="66" class="mono-body">• Verifies balance state changes</text>
+    <text x="16" y="88" class="mono-muted">Catches gas drainers &amp; reverts</text>
+  </g>
+
+  <!-- 2D. SignerManager Box -->
+  <g transform="translate(390, 416)">
+    <rect width="260" height="110" class="inner-box" />
+    <text x="16" y="26" class="mono-title">SignerManager</text>
+    <text x="16" y="48" class="mono-body">• Signs EIP-3009 Authorizations</text>
+    <text x="16" y="66" class="mono-body">• Enforces 24h validity window</text>
+    <text x="16" y="88" class="mono-muted">Zero private key exposure</text>
+  </g>
+
+  <!-- 2E. Violation Handler Box -->
+  <g transform="translate(720, 416)">
+    <rect width="280" height="110" class="inner-box" style="stroke: #4c0519;" />
+    <text x="16" y="26" class="mono-title" fill="#fb7185">Incident Containment</text>
+    <text x="16" y="48" class="mono-body">• Drops outbound request / tx</text>
+    <text x="16" y="66" class="mono-body">• Records BLOCKED to local SQLite</text>
+    <text x="16" y="88" class="mono-body" fill="#f43f5e">• Fires webhook alert immediately</text>
+  </g>
+
+  <!-- Connectors from Firewall to External layer -->
+  <!-- Audit connection: from Simulator & Incident to Local SQLite -->
+  <line x1="220" y1="526" x2="220" y2="598" class="line" marker-end="url(#arrowhead)" />
+  <path d="M 860 526 L 860 560 L 320 560 L 320 598" class="line" marker-end="url(#arrowhead)" stroke-dasharray="4,4" />
+
+  <!-- Outbound connection: from SignerManager to Target APIs / Base L2 -->
+  <path d="M 520 526 L 520 570 L 780 570 L 780 598" class="line" marker-end="url(#arrowhead)" />
+
+  <!-- 3. BOTTOM DESTINATIONS -->
+  <!-- 3A. Local Audit Store -->
+  <g transform="translate(140, 600)">
+    <rect width="280" height="82" class="box-bg" />
+    <text x="140" y="28" text-anchor="middle" class="mono-title">Local SQLite Audit Store</text>
+    <text x="140" y="48" text-anchor="middle" class="mono-body">~/.x402firewall/audit.db</text>
+    <text x="140" y="66" text-anchor="middle" class="mono-muted">Deterministic logs • 0o700 perm</text>
+  </g>
+
+  <!-- 3B. External Target Server & Chain -->
+  <g transform="translate(640, 600)">
+    <rect width="280" height="82" class="box-bg" />
+    <text x="140" y="28" text-anchor="middle" class="mono-title">Target APIs &amp; Base L2</text>
+    <text x="140" y="48" text-anchor="middle" class="mono-body">HTTP 200 OK + Data Payload</text>
+    <text x="140" y="66" text-anchor="middle" class="mono-muted">Verified micro-payment delivery</text>
+  </g>
+</svg>
