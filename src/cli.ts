@@ -18,6 +18,7 @@ Usage:
 Commands:
   (default)     Starts the MCP Server using Stdio transport (for Claude Desktop, Cursor, etc.)
   status        Displays current budget caps, rolling spend, and active guardrails/firewall rules
+  audit         Displays recent permitted and blocked transactions from local SQLite audit store
   --help, -h    Displays this help menu
 
 Environment Variables:
@@ -69,6 +70,27 @@ Active Firewall Rules:
   • Allowed Contracts:         ${policy.allowedContracts.length ? policy.allowedContracts.join(', ') : 'ALL'}
 ======================================================
 \n`);
+    client.close();
+    process.exit(0);
+  }
+
+  if (args.includes('audit') || args.includes('--audit')) {
+    const client = new FirewallClient();
+    const logs = client.getAuditLogs(10);
+    process.stderr.write(`
+======================================================
+             Recent Audit Logs (${logs.length} entries)
+======================================================\n`);
+    if (logs.length === 0) {
+      process.stderr.write(`No audit logs recorded yet in ${client.policyEngine.getPolicy().databasePath}\n\n`);
+    } else {
+      for (const log of logs) {
+        const target = log.domain || log.recipient || 'on-chain';
+        const date = new Date(log.timestamp).toISOString();
+        process.stderr.write(`• [${date}] ${target} | $${log.amount_usdc.toFixed(4)} USDC | ${log.status}${log.reason ? ` — ${log.reason}` : ''}\n`);
+      }
+      process.stderr.write(`======================================================\n\n`);
+    }
     client.close();
     process.exit(0);
   }
